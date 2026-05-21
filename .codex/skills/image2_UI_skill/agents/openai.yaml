@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vue TS Image2 UI"
+  short_description: "Vue3 TS + yudao 风格 UI 复刻与 image2 资产验真"
+  default_prompt: "Use $image2-ui-skill 先拆解 UI 参考图中的代码 UI、image2 位图资产和透明 PNG，再按 Vue3 + TypeScript + Element Plus/yudao 风格实现并截图验证。"

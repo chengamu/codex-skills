@@ -1,0 +1,4 @@
+interface:
+  display_name: "SSH Key Deploy"
+  short_description: "Set up and verify SSH key based server login."
+  default_prompt: "Set up SSH key based login to a server and verify access without exposing secrets."
