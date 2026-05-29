@@ -12,6 +12,7 @@ This repository stores shared Codex subagents and skills for team use.
 - `.codex/agents/java-architect.toml`
 - `.codex/skills/ssh-key-deploy`
 - `.codex/skills/image2_UI_skill`
+- `.agents/skills/amu-workflow`
 
 The subagent TOML files are sourced from:
 
@@ -25,6 +26,8 @@ Run from this repository root:
 New-Item -ItemType Directory -Force -Path $HOME\.codex\agents, $HOME\.codex\skills | Out-Null
 Copy-Item -Recurse -Force .\.codex\agents\* $HOME\.codex\agents\
 Copy-Item -Recurse -Force .\.codex\skills\* $HOME\.codex\skills\
+New-Item -ItemType Directory -Force -Path $HOME\.agents\skills | Out-Null
+Copy-Item -Recurse -Force .\.agents\skills\amu-workflow $HOME\.agents\skills\
 ```
 
 Restart Codex after installing.
@@ -37,6 +40,8 @@ Run from this repository root and replace `<PROJECT_PATH>`:
 New-Item -ItemType Directory -Force -Path <PROJECT_PATH>\.codex\agents, <PROJECT_PATH>\.codex\skills | Out-Null
 Copy-Item -Recurse -Force .\.codex\agents\* <PROJECT_PATH>\.codex\agents\
 Copy-Item -Recurse -Force .\.codex\skills\* <PROJECT_PATH>\.codex\skills\
+New-Item -ItemType Directory -Force -Path <PROJECT_PATH>\.agents\skills | Out-Null
+Copy-Item -Recurse -Force .\.agents\skills\amu-workflow <PROJECT_PATH>\.agents\skills\
 ```
 
 Project-level `.codex` files override global files with the same names.
