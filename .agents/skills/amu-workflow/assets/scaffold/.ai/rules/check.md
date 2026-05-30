@@ -9,13 +9,32 @@ Check（检查）是 `/do` 内部加载的阶段。
 - Scope check：检查任务边界。
 - Owner boundary check：检查 Owner 边界。
 - Requirement acceptance criteria check：检查需求验收标准。
-- code-reviewer static review：由 `code-reviewer` 做静态审查。
 - i18n check：检查国际化。
 - UTC / timezone check：检查时间语义。
 - permission / tenant check：检查权限 / 租户。
 - API / data compatibility check：检查接口 / 数据兼容性。
 - build/test/lint result check：检查构建 / 测试 / lint 结果。
 - runtime / browser / API verification check：检查运行时 / 浏览器 / API 验证。
+
+## 双 Lane
+
+`/check` 必须拆成两个 lane，不能让静态审查吞掉运行时验证。
+
+### Lane A: Static Review
+
+- 用于代码风险审查。
+- 优先从 Agent Registry 匹配 `review` / `code-review` / `security` / `quality` Agent。
+- 找不到可信 Agent 时由 main 执行。
+- 检查 Java、Vue、TS、SQL、API、权限、事务、安全、contract、可维护性。
+- 只做静态代码审查，不做浏览器自动化。
+
+### Lane B: Runtime Validation
+
+- 用于运行时验证。
+- 优先使用 Codex in-app Browser / Chrome Extension / 项目测试脚本 / Playwright。
+- 也可以从 Agent Registry 匹配 `browser` / `e2e` / `test` / `frontend` / `ui` Agent。
+- 检查页面是否能打开、交互是否正常、表单是否可提交、console 是否报错、network / API 是否失败。
+- 不允许被 `code-reviewer` 或 Static Review Lane 替代。
 
 ## CodeGraph 同步
 

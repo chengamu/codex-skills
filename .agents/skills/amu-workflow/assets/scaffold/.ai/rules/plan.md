@@ -7,19 +7,20 @@ Plan（计划）必须以 requirement source（需求来源）为前提。如果
 ## 执行流程
 
 1. 读取默认上下文。
-2. 在项目根目录运行 `codegraph sync`，刷新代码索引。
-3. sync 成功后继续；sync 失败时记录失败原因和风险，不能伪造索引已更新。
-4. 需求不清或缺少需求来源时，加载 `spec.md`。
-5. 创建或更新 `.ai/requirements/*.md`。
-6. 读取当前 requirement source（需求来源）。
-7. 分析真实代码结构和项目约束。
-8. 需要可并行调度时，加载 `wave-scheduler.md`。
-9. 只有明确相关时才加载 Playbook（可复用排错手册）。
-10. 生成方案拆解。
-11. 分配 Owner（任务负责人 / 子 Agent 角色）。
-12. 生成可调度任务计划，并写入 `.ai/TASKS.md`；复杂需求可同时生成当前 change 的 `wave-plan.md`。
-13. 更新 `.ai/CURRENT.md`。
-14. 停止，等待用户确认进入 `/do`。
+2. 加载 `tooling.md`，执行 Agent Discovery。
+3. 在项目根目录运行 `codegraph sync`，刷新代码索引。
+4. sync 成功后继续；sync 失败时记录失败原因和风险，不能伪造索引已更新。
+5. 需求不清或缺少需求来源时，加载 `spec.md`。
+6. 创建或更新 `.ai/requirements/*.md`。
+7. 读取当前 requirement source（需求来源）。
+8. 分析真实代码结构和项目约束。
+9. 需要可并行调度时，加载 `wave-scheduler.md`。
+10. 只有明确相关时才加载 Playbook（可复用排错手册）。
+11. 生成方案拆解。
+12. 基于 Agent Registry 分配 Owner（任务负责人 / 子 Agent 角色）。
+13. 生成可调度任务计划，并写入 `.ai/TASKS.md`；复杂需求可同时生成当前 change 的 `wave-plan.md`。
+14. 更新 `.ai/CURRENT.md`。
+15. 停止，等待用户确认进入 `/do`。
 
 ## CodeGraph 同步
 
@@ -69,15 +70,24 @@ codegraph sync
 
 必须记录原计划、修订原因、新计划、影响范围、Acceptance Criteria（验收标准）变化和 Risks（风险）变化。
 
-## Owner 分配
+## Agent Discovery
 
-允许的 Owner：
+`/plan` 开始前必须发现可用子 Agent：
 
-- `main`：跨领域协调、工作流规则、简单任务。
-- `frontend-developer`：前端页面、组件、样式、交互。
-- `typescript-pro`：TypeScript 类型和复杂 TS 逻辑。
-- `java-architect`：Java 后端、Service、Mapper、权限、事务、架构影响。
-- `code-reviewer`：最终静态审查和验收。
+- 先扫描 `.codex/agents/*.toml`。
+- 如果不存在，再扫描 `.agents/agents/*.toml`。
+- 从 `name` / `description` 生成 Agent Registry。
+- 不硬编码固定 Agent 名称。
+- Task Owner 只能来自 Agent Registry 或 `main`。
+
+## Agent Matching
+
+- Java / Spring / backend / SQL / transaction / permission / tenant 任务：匹配 `name` / `description` 中包含 `java`、`backend`、`spring`、`architect`、`sql`、`database` 的 Agent。
+- Vue / frontend / UI / component / CSS 任务：匹配 `frontend`、`vue`、`ui`、`component`。
+- TypeScript / type / API typing 任务：匹配 `typescript`、`ts`、`type`。
+- Static review / security / quality 任务：匹配 `review`、`code-review`、`security`、`quality`。
+- Browser / e2e / runtime / UI validation 任务：匹配 `browser`、`e2e`、`test`、`qa`、`frontend`、`ui`。
+- 找不到可信匹配时，`Owner = main`，并记录 `OwnerSource = main-fallback`。
 
 ## Wave Scheduler 任务要求
 
@@ -88,6 +98,8 @@ codegraph sync
 - `TaskId`
 - `Title`
 - `Owner`
+- `OwnerSource`
+- `OwnerReason`
 - `AgentRole`
 - `Wave`
 - `DependsOn`
@@ -100,17 +112,17 @@ codegraph sync
 - `Status`
 - `Priority`
 
-字段名、Agent 名、路径、状态值和专业术语保留英文；Task 标题、说明、Acceptance、RiskLevel 原因、Barrier Checks 必须中文为主。
+字段名、Agent 名、路径、状态值和专业术语保留英文；Task 标题、说明、`OwnerReason`、Acceptance、RiskLevel 原因、Barrier Checks 必须中文为主。
 
 默认 Wave 模型：
 
 - Wave 0：确认 `API contract`、`DTO` / `VO` / `BO` 字段、`enum`、日期 / 时区、`pagination`、`tenant` / `permission` 边界、DB schema 边界、前后端字段映射。
 - Wave 1：独立实现，可包含 backend、frontend、database migration、i18n message、docs / config；前提是 `Files` 不重叠，`ConflictBoundary` 明确。
 - Wave 2：集成对齐，校准 frontend API types、backend DTO/VO、enum、date format、page response、error message、permissions。
-- Wave 3：Code Review / Security Review，使用 `code-reviewer` 做真实风险审计。
+- Wave 3：Code Review / Security Review，使用匹配到的 review / code-review / security / quality Agent 做真实风险审计。
 - Wave 4：进入 `/check`，执行 build、test、lint、browser validation、API validation、regression check。
 
-`code-reviewer` 不应和 implementation tasks 放在同一 Wave。
+Static Review Agent 不应和 implementation tasks 放在同一 Wave。
 
 ## 任务模板
 
@@ -133,7 +145,9 @@ Wave Scheduler 任务示例：
 ```md
 ### Task B1: 实现后端接口与服务逻辑
 
-Owner: java-architect
+Owner: <backend-agent-from-registry>
+OwnerSource: agent-registry
+OwnerReason: 该任务涉及后端接口、Service、Mapper 和 transaction，匹配后端架构类 Agent。
 AgentRole: backend
 Status: pending
 Priority: high

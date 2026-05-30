@@ -32,6 +32,15 @@
 - `/do` 只加载 `.ai/rules/do.md` 和 `.ai/rules/check.md`；存在 Wave 任务时加载 `.ai/rules/wave-scheduler.md`；需要子 Agent 或 CodeGraph 时再加载 `.ai/rules/tooling.md`；上下文超限时再加载 `.ai/rules/compact.md`。
 - `/archive` 只加载 `.ai/rules/archive.md`、`.ai/rules/learn.md` 和 `.ai/rules/compact.md`。
 
+## Agent 与 Check
+
+- `/plan` 开始前扫描 `.codex/agents/*.toml`；不存在时再扫描 `.agents/agents/*.toml`。
+- Task Owner 只能来自 Agent Registry 或 `main`，找不到可信匹配时记录 `OwnerSource = main-fallback`。
+- `/do` 中 `OwnerSource = agent-registry` 的任务必须调用对应子 Agent；子 Agent 不可用时记录 `SubAgent unavailable` 后再 fallback。
+- `/check` 分为 Static Review Lane 和 Runtime Validation Lane。
+- Static Review Lane 只做静态审查，不做浏览器自动化。
+- Runtime Validation Lane 执行 Codex Browser / Chrome Extension / Playwright / npm scripts，不允许被 code-reviewer 替代。
+
 ## 文件职责
 
 - `.ai/requirements/*.md`：长期需求、产品规格、业务规则、验收标准。

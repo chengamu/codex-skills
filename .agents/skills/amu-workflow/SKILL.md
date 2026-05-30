@@ -46,13 +46,15 @@ description: 轻量工程化 AI workflow。用于需要 Codex 按 /plan、/do、
 执行：
 1. 按需读取 `references/rules/spec.md`
 2. 按需读取 `references/rules/plan.md`
-3. 在目标项目根目录运行 `codegraph sync`
-4. 需要 Wave Scheduler 时读取 `references/rules/wave-scheduler.md`
-5. 在目标项目创建或更新 .ai/requirements 下的需求文档
-6. 生成可调度任务计划，必要时写入当前 change 的 wave-plan.md
-7. 更新目标项目的 .ai/CURRENT.md
-8. 更新目标项目的 .ai/TASKS.md
-9. 停下等待用户确认 `/do`
+3. `/plan` 开始前执行 Agent Discovery：先扫描 `.codex/agents/*.toml`，不存在时再扫描 `.agents/agents/*.toml`
+4. 生成 Agent Registry，Task Owner 只能来自 Agent Registry 或 `main`
+5. 在目标项目根目录运行 `codegraph sync`
+6. 需要 Wave Scheduler 时读取 `references/rules/wave-scheduler.md`
+7. 在目标项目创建或更新 .ai/requirements 下的需求文档
+8. 生成可调度任务计划，必要时写入当前 change 的 wave-plan.md
+9. 更新目标项目的 .ai/CURRENT.md
+10. 更新目标项目的 .ai/TASKS.md
+11. 停下等待用户确认 `/do`
 
 ### /do
 
@@ -63,8 +65,10 @@ description: 轻量工程化 AI workflow。用于需要 Codex 按 /plan、/do、
 4. 需要子 Agent 或 codegraph 时读取 `references/rules/tooling.md`
 5. 超限或膨胀时读取 `references/rules/compact.md`
 6. 按 Wave / Barrier 执行 do/check 循环
-7. 如果本轮 `/do` 修改了代码，Runtime / API / Browser Validation 前在目标项目根目录运行 `codegraph sync`
-8. 全部完成后把 Next Step 设置为 `Ready for /archive`
+7. `OwnerSource = agent-registry` 时必须调用匹配到的子 Agent；`OwnerSource = main-fallback` 时由 main 执行
+8. 如果子 Agent 不可用，记录 `SubAgent unavailable`，再 fallback 到 main
+9. 如果本轮 `/do` 修改了代码，Runtime / API / Browser Validation 前在目标项目根目录运行 `codegraph sync`
+10. 全部完成后把 Next Step 设置为 `Ready for /archive`
 
 CodeGraph 同步规则：
 - `codegraph sync` 用于刷新代码索引，不等同于 build/test/lint。
@@ -107,13 +111,31 @@ CodeGraph 同步规则：
 
 `Wave Scheduler` 是 `/do` 的轻量调度增强，不引入平台、服务端、数据库或额外 runtime。
 
-- `/plan` 必须生成可调度任务，任务包含 `TaskId`、`Title`、`Owner`、`AgentRole`、`Wave`、`DependsOn`、`Files`、`Forbidden`、`ParallelGroup`、`ConflictBoundary`、`Acceptance`、`RiskLevel`。
+- `/plan` 必须生成可调度任务，任务包含 `TaskId`、`Title`、`Owner`、`OwnerSource`、`OwnerReason`、`AgentRole`、`Wave`、`DependsOn`、`Files`、`Forbidden`、`ParallelGroup`、`ConflictBoundary`、`Acceptance`、`RiskLevel`。
 - `/do` 不把任务当作 flat checklist 顺序执行，而是按 Wave 执行：Wave 0 -> Barrier 0 -> Wave 1 -> Barrier 1。
 - 同一 Wave 内任务如果依赖已完成、Files 不重叠、Forbidden / ConflictBoundary 明确、Acceptance 可验证，可以分配给多个 subagent。
 - 当前环境支持 true parallel subagents 时，同一 Wave 内并行 dispatch。
 - 当前环境不支持 true parallel subagents 时，使用 sequential execution with Wave/Barrier semantics：顺序执行，但严格保留 Wave 和 Barrier 语义。
-- `code-reviewer` 不和 implementation tasks 放在同一 Wave；审计默认放在 Wave 3。
+- review / code-review / security / quality Agent 不和 implementation tasks 放在同一 Wave；静态审计默认放在 Wave 3。
 - build/test/lint/browser/api validation 默认属于 `/check`，除非任务明确允许在 `/do` 做 targeted checks。
+
+## Agent Discovery
+
+- `/plan` 开始前扫描 `.codex/agents/*.toml`。
+- 如果不存在，再扫描 `.agents/agents/*.toml`。
+- 根据 Agent 的 `name` / `description` 生成 Agent Registry。
+- 不硬编码固定 Agent 名称。
+- Task Owner 只能来自 Agent Registry 或 `main`。
+- 找不到可信匹配时，`Owner = main`，并记录 `OwnerSource = main-fallback`。
+
+## /check 双 Lane
+
+`/check` 必须拆成两个 lane：
+
+- Lane A: Static Review。只做静态代码审查，优先匹配 `review` / `code-review` / `security` / `quality` Agent。找不到则由 main 执行。不得做浏览器自动化。
+- Lane B: Runtime Validation。执行运行时验证，优先使用 Codex in-app Browser / Chrome Extension / 项目测试脚本 / Playwright，也可匹配 `browser` / `e2e` / `test` / `frontend` / `ui` Agent。
+
+`code-reviewer` 或其他 Static Review Agent 不能替代 Runtime Validation Lane。页面打开、交互、表单提交、console error、network error、接口失败检查必须由 Runtime Validation Lane 处理。
 
 ## 语言规则
 
@@ -122,8 +144,8 @@ CodeGraph 同步规则：
 以下内容保留英文：
 
 - 命令：`/spec`、`/plan`、`/do`、`/check`、`/archive`
-- 字段名：`TaskId`、`Title`、`Owner`、`AgentRole`、`Wave`、`DependsOn`、`Files`、`Forbidden`、`ParallelGroup`、`ConflictBoundary`、`Acceptance`、`RiskLevel`、`Status`、`Priority`
-- Agent 名称：`java-architect`、`frontend-developer`、`typescript-pro`、`code-reviewer`
+- 字段名：`TaskId`、`Title`、`Owner`、`OwnerSource`、`OwnerReason`、`AgentRole`、`Wave`、`DependsOn`、`Files`、`Forbidden`、`ParallelGroup`、`ConflictBoundary`、`Acceptance`、`RiskLevel`、`Status`、`Priority`
+- Agent 名称：来自 Agent Registry 的 `name` 值，例如项目中实际存在的 review / frontend / backend / test Agent。
 - 状态值：`pending`、`claimed`、`running`、`done`、`blocked`、`failed`
 - 执行概念：`Wave Scheduler`、`Barrier`、`Worktree`、`subagent`、`orchestrator`、`contract`、`DTO`、`VO`、`BO`、`API`、`enum`、`pagination`、`tenant`、`permission`
 - 文件路径、类名、方法名、变量名、配置名

@@ -11,18 +11,29 @@
 
 ## 子 Agent
 
+- `/plan` 先执行 Agent Discovery，再基于 Agent Registry 分配 Owner。
 - `/plan` 可以咨询子 Agent 做方案分析，但不能执行代码。
-- `/do` 按 Task Owner（任务负责人 / 子 Agent 角色）调度子 Agent。
-- `/check` 内部阶段可用时必须使用 `code-reviewer` 角色做审查。
+- `/do` 按 Task Owner（任务负责人 / 子 Agent 角色）和 `OwnerSource` 调度子 Agent。
+- `/check` 的 Static Review Lane 优先匹配 review / code-review / security / quality Agent 做静态审查。
+- `/check` 的 Runtime Validation Lane 使用 Codex Browser / Chrome Extension / 项目测试脚本 / Playwright；不得被 code-reviewer 替代。
 - 子 Agent 不能扩大 Scope（任务边界）。
 - 子 Agent 不能重排 Tasks。
 - 子 Agent 不能绕过 Pause Points（暂停点）。
 - 子 Agent 输出必须压缩摘要写入 CURRENT / TASKS，不能完整粘贴。
 
-## Owner 映射
+## Agent Discovery
 
-- `main`：工作流协调、文档、简单修改。
-- `frontend-developer`：Vue 页面、组件、样式、交互。
-- `typescript-pro`：TypeScript 类型、复杂前端逻辑、API 类型。
-- `java-architect`：Java 后端、Service、Mapper、事务、权限、架构。
-- `code-reviewer`：审查、验证、风险检查、验收标准检查。
+- `/plan` 开始前扫描 `.codex/agents/*.toml`。
+- 如果不存在，再扫描 `.agents/agents/*.toml`。
+- 从 TOML 的 `name` / `description` 生成 Agent Registry。
+- 不硬编码固定 Agent 名称。
+- Task Owner 只能来自 Agent Registry 或 `main`。
+
+## Agent Matching
+
+- Java / Spring / backend / SQL / transaction / permission / tenant：匹配 `java`、`backend`、`spring`、`architect`、`sql`、`database`。
+- Vue / frontend / UI / component / CSS：匹配 `frontend`、`vue`、`ui`、`component`。
+- TypeScript / type / API typing：匹配 `typescript`、`ts`、`type`。
+- Static review / security / quality：匹配 `review`、`code-review`、`security`、`quality`。
+- Browser / e2e / runtime / UI validation：匹配 `browser`、`e2e`、`test`、`qa`、`frontend`、`ui`。
+- 找不到可信匹配时，`Owner = main`，`OwnerSource = main-fallback`，并写明 `OwnerReason`。

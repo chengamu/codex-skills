@@ -23,6 +23,14 @@
 - `/do`：只加载 `.ai/rules/do.md` + `.ai/rules/check.md`，存在 Wave 任务时加载 `.ai/rules/wave-scheduler.md`，必要时加载 `.ai/rules/tooling.md` / `.ai/rules/compact.md`。
 - `/archive`：只加载 `.ai/rules/archive.md` + `.ai/rules/learn.md` + `.ai/rules/compact.md`。
 
+## Agent 与 Check
+
+- `/plan` 开始前扫描 `.codex/agents/*.toml`；不存在时再扫描 `.agents/agents/*.toml`。
+- Task Owner 只能来自 Agent Registry 或 `main`。
+- `/do` 按 `OwnerSource` 调度子 Agent；子 Agent 不可用时记录 `SubAgent unavailable` 后再 fallback。
+- `/check` 拆为 Static Review Lane 和 Runtime Validation Lane。
+- `code-reviewer` 只负责静态审查，不能替代浏览器、API、运行时验证。
+
 ## 文件职责
 
 - `.ai/requirements/*.md`：长期需求。
