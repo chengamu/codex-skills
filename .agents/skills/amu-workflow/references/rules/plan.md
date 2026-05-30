@@ -7,16 +7,31 @@ Plan（计划）必须以 requirement source（需求来源）为前提。如果
 ## 执行流程
 
 1. 读取默认上下文。
-2. 需求不清或缺少需求来源时，加载 `spec.md`。
-3. 创建或更新 `.ai/requirements/*.md`。
-4. 读取当前 requirement source（需求来源）。
-5. 分析真实代码结构和项目约束。
-6. 只有明确相关时才加载 Playbook（可复用排错手册）。
-7. 生成方案拆解。
-8. 分配 Owner（任务负责人 / 子 Agent 角色）。
-9. 生成 `.ai/TASKS.md`。
-10. 更新 `.ai/CURRENT.md`。
-11. 停止，等待用户确认进入 `/do`。
+2. 在项目根目录运行 `codegraph sync`，刷新代码索引。
+3. sync 成功后继续；sync 失败时记录失败原因和风险，不能伪造索引已更新。
+4. 需求不清或缺少需求来源时，加载 `spec.md`。
+5. 创建或更新 `.ai/requirements/*.md`。
+6. 读取当前 requirement source（需求来源）。
+7. 分析真实代码结构和项目约束。
+8. 只有明确相关时才加载 Playbook（可复用排错手册）。
+9. 生成方案拆解。
+10. 分配 Owner（任务负责人 / 子 Agent 角色）。
+11. 生成 `.ai/TASKS.md`。
+12. 更新 `.ai/CURRENT.md`。
+13. 停止，等待用户确认进入 `/do`。
+
+## CodeGraph 同步
+
+`/plan` 开始分析代码结构前，必须在项目根目录运行：
+
+```bash
+codegraph sync
+```
+
+- `codegraph sync` 用于刷新代码索引，保证后续 CodeGraph 查询尽量基于最新代码。
+- `codegraph sync` 不等同于 build/test/lint。
+- sync 后仍要读取真实源文件确认最终结论。
+- sync 失败时，必须在 CURRENT / TASKS 中记录风险；不能假装已同步成功。
 
 ## Clarification Gate：澄清门
 

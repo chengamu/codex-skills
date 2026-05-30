@@ -36,10 +36,11 @@ description: 轻量工程化 AI workflow。用于需要 Codex 按 /plan、/do、
 执行：
 1. 按需读取 `references/rules/spec.md`
 2. 按需读取 `references/rules/plan.md`
-3. 在目标项目创建或更新 `.ai/requirements/*.md`
-4. 更新 `.ai/CURRENT.md`
-5. 更新 `.ai/TASKS.md`
-6. 停下等待用户确认 `/do`
+3. 在目标项目根目录运行 `codegraph sync`
+4. 在目标项目创建或更新 `.ai/requirements/*.md`
+5. 更新 `.ai/CURRENT.md`
+6. 更新 `.ai/TASKS.md`
+7. 停下等待用户确认 `/do`
 
 ### /do
 
@@ -49,7 +50,13 @@ description: 轻量工程化 AI workflow。用于需要 Codex 按 /plan、/do、
 3. 需要子 Agent 或 codegraph 时读取 `references/rules/tooling.md`
 4. 超限或膨胀时读取 `references/rules/compact.md`
 5. 执行 do/check 循环
-6. 全部完成后把 Next Step 设置为 `Ready for /archive`
+6. 如果本轮 `/do` 修改了代码，Runtime / API / Browser Validation 前在目标项目根目录运行 `codegraph sync`
+7. 全部完成后把 Next Step 设置为 `Ready for /archive`
+
+CodeGraph 同步规则：
+- `codegraph sync` 用于刷新代码索引，不等同于 build/test/lint。
+- sync 后仍要读取真实源文件确认最终结论。
+- sync 失败时必须记录失败和风险，不能伪造成功。
 
 ### /archive
 
