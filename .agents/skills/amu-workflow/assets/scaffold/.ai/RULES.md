@@ -5,7 +5,7 @@
 ## 主命令
 
 - `/plan`：需求沉淀 + 方案拆解 + Owner 分配。
-- `/do`：连续执行 + 自动 check + 必要 compact。
+- `/do`：按 Wave Scheduler 连续执行 + 自动 check + 必要 compact。
 - `/archive`：learn + archive + final compact。
 
 ## 默认读取
@@ -20,7 +20,7 @@
 ## 按需加载
 
 - `/plan`：只加载 `.ai/rules/spec.md` + `.ai/rules/plan.md`。
-- `/do`：只加载 `.ai/rules/do.md` + `.ai/rules/check.md`，必要时加载 `.ai/rules/tooling.md` / `.ai/rules/compact.md`。
+- `/do`：只加载 `.ai/rules/do.md` + `.ai/rules/check.md`，存在 Wave 任务时加载 `.ai/rules/wave-scheduler.md`，必要时加载 `.ai/rules/tooling.md` / `.ai/rules/compact.md`。
 - `/archive`：只加载 `.ai/rules/archive.md` + `.ai/rules/learn.md` + `.ai/rules/compact.md`。
 
 ## 文件职责
@@ -41,3 +41,5 @@
 - 不把 CURRENT/TASKS 写成知识库。
 - 不把 MEMORY 写成长日志库。
 - 未执行的验证不得声称通过。
+- `/plan` 生成任务内容中文为主，字段名、Agent 名、命令、路径、状态值和专业术语保留英文。
+- `/do` 支持 Wave / Barrier；不支持 true parallel subagents 时，顺序执行但保留 Wave / Barrier 语义。

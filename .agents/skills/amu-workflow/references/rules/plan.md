@@ -13,12 +13,13 @@ Plan（计划）必须以 requirement source（需求来源）为前提。如果
 5. 创建或更新 `.ai/requirements/*.md`。
 6. 读取当前 requirement source（需求来源）。
 7. 分析真实代码结构和项目约束。
-8. 只有明确相关时才加载 Playbook（可复用排错手册）。
-9. 生成方案拆解。
-10. 分配 Owner（任务负责人 / 子 Agent 角色）。
-11. 生成 `.ai/TASKS.md`。
-12. 更新 `.ai/CURRENT.md`。
-13. 停止，等待用户确认进入 `/do`。
+8. 需要可并行调度时，加载 `wave-scheduler.md`。
+9. 只有明确相关时才加载 Playbook（可复用排错手册）。
+10. 生成方案拆解。
+11. 分配 Owner（任务负责人 / 子 Agent 角色）。
+12. 生成可调度任务计划，并写入 `.ai/TASKS.md`；复杂需求可同时生成当前 change 的 `wave-plan.md`。
+13. 更新 `.ai/CURRENT.md`。
+14. 停止，等待用户确认进入 `/do`。
 
 ## CodeGraph 同步
 
@@ -78,6 +79,39 @@ codegraph sync
 - `java-architect`：Java 后端、Service、Mapper、权限、事务、架构影响。
 - `code-reviewer`：最终静态审查和验收。
 
+## Wave Scheduler 任务要求
+
+`/plan` 生成任务时，必须让任务可被 `/do` 调度。复杂需求默认使用 Wave Scheduler。
+
+每个 Task 必须包含：
+
+- `TaskId`
+- `Title`
+- `Owner`
+- `AgentRole`
+- `Wave`
+- `DependsOn`
+- `Files`
+- `Forbidden`
+- `ParallelGroup`
+- `ConflictBoundary`
+- `Acceptance`
+- `RiskLevel`
+- `Status`
+- `Priority`
+
+字段名、Agent 名、路径、状态值和专业术语保留英文；Task 标题、说明、Acceptance、RiskLevel 原因、Barrier Checks 必须中文为主。
+
+默认 Wave 模型：
+
+- Wave 0：确认 `API contract`、`DTO` / `VO` / `BO` 字段、`enum`、日期 / 时区、`pagination`、`tenant` / `permission` 边界、DB schema 边界、前后端字段映射。
+- Wave 1：独立实现，可包含 backend、frontend、database migration、i18n message、docs / config；前提是 `Files` 不重叠，`ConflictBoundary` 明确。
+- Wave 2：集成对齐，校准 frontend API types、backend DTO/VO、enum、date format、page response、error message、permissions。
+- Wave 3：Code Review / Security Review，使用 `code-reviewer` 做真实风险审计。
+- Wave 4：进入 `/check`，执行 build、test、lint、browser validation、API validation、regression check。
+
+`code-reviewer` 不应和 implementation tasks 放在同一 Wave。
+
 ## 任务模板
 
 ```md
@@ -92,6 +126,43 @@ Files：预计相关文件
 Validation：验证方式
 Blockers：阻塞项
 Short Notes：简短记录
+```
+
+Wave Scheduler 任务示例：
+
+```md
+### Task B1: 实现后端接口与服务逻辑
+
+Owner: java-architect
+AgentRole: backend
+Status: pending
+Priority: high
+RiskLevel: high
+Wave: 1
+
+Files:
+- backend/src/main/java/**/controller/**
+- backend/src/main/java/**/service/**
+- backend/src/main/resources/mapper/**
+
+Forbidden:
+- admin-ui/**
+- package.json
+- pom.xml
+- .ai/archive/**
+
+DependsOn:
+- C1
+
+ParallelGroup: backend
+ConflictBoundary: backend-only
+
+Acceptance:
+- API 必须实现 Wave 0 定义的 contract
+- 写操作必须在需要时具备 transaction 边界
+- 必须遵守 tenant/data permission
+- 不允许引入 raw SQL injection 风险
+- 异常信息必须对用户安全，必要时兼容 i18n
 ```
 
 ## CURRENT 模板

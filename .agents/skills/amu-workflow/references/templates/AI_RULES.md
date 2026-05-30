@@ -3,7 +3,7 @@
 ## 主命令
 
 - `/plan`：需求沉淀与方案规划。内部按需加载 `spec.md` 和 `plan.md`。
-- `/do`：连续执行任务，并自动进行 do/check 循环。内部按需加载 `do.md` 和 `check.md`，必要时加载 `compact.md` / `tooling.md`。
+- `/do`：按 Wave Scheduler 连续执行任务，并自动进行 do/check 循环。内部按需加载 `do.md` 和 `check.md`，必要时加载 `wave-scheduler.md` / `compact.md` / `tooling.md`。
 - `/archive`：经验提炼与归档。内部按需加载 `archive.md`、`learn.md` 和 `compact.md`。
 
 日常只使用 `/plan`、`/do`、`/archive`。内部规则分层保存，按需加载，不一次性读取全部规则。
@@ -29,7 +29,7 @@
 按命令加载：
 
 - `/plan` 只加载 `.ai/rules/spec.md` 和 `.ai/rules/plan.md`。
-- `/do` 只加载 `.ai/rules/do.md` 和 `.ai/rules/check.md`；需要子 Agent 或 CodeGraph 时再加载 `.ai/rules/tooling.md`；上下文超限时再加载 `.ai/rules/compact.md`。
+- `/do` 只加载 `.ai/rules/do.md` 和 `.ai/rules/check.md`；存在 Wave 任务时加载 `.ai/rules/wave-scheduler.md`；需要子 Agent 或 CodeGraph 时再加载 `.ai/rules/tooling.md`；上下文超限时再加载 `.ai/rules/compact.md`。
 - `/archive` 只加载 `.ai/rules/archive.md`、`.ai/rules/learn.md` 和 `.ai/rules/compact.md`。
 
 ## 文件职责
@@ -56,6 +56,8 @@
 - build/test/lint 需要授权；未执行不能声称通过。
 - 不把长日志、完整 trace、完整 build/test 输出写入 CURRENT / TASKS / MEMORY。
 - 不确定内容写 TODO，不猜测不存在的框架能力。
+- `/plan` 生成任务内容中文为主，字段名、Agent 名、命令、路径、状态值和专业术语保留英文。
+- `/do` 支持 Wave / Barrier；不支持 true parallel subagents 时，顺序执行但保留 Wave / Barrier 语义。
 
 ## AGENTS.md 建议片段
 
@@ -66,7 +68,7 @@
 
 日常主命令：
 - `/plan`：需求沉淀 + 方案拆解 + Owner 分配
-- `/do`：连续执行 + 自动 check + 必要 compact
+- `/do`：按 Wave Scheduler 连续执行 + 自动 check + 必要 compact
 - `/archive`：learn + archive + final compact
 
 规则：

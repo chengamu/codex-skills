@@ -20,15 +20,16 @@
 ## 执行流程
 
 1. 读取 `.ai/CURRENT.md` 和 `.ai/TASKS.md`。
-2. 找到第一个 `pending` 或 `in_progress` 任务。
-3. 按 Owner 调度。
-4. 在 Task Scope（任务边界）内执行。
-5. 记录 Short Notes（简短记录），不写长过程。
-6. 自动加载 `check.md`。
-7. check 通过 -> 标记任务完成并继续。
-8. check 失败 -> 更新 blocker（阻塞项）/ Short Notes，然后回到 `/do` 修复。
-9. do/check 循环重复或上下文增长 -> 加载 `compact.md`。
-10. 所有任务完成 -> 将 CURRENT 的 Next Step 更新为 `Ready for /archive`。
+2. 如果存在 `wave-plan.md` 或 Task 包含 `Wave` 字段，加载 `wave-scheduler.md`。
+3. 按当前 Wave 构建可执行任务集合。
+4. 同一 Wave 内可并行时分配给多个 subagent；不可并行时顺序执行，但保留 Wave / Barrier 语义。
+5. 按 Owner 调度，并限制在 Task Scope（任务边界）内执行。
+6. 记录 Short Notes（简短记录）和 task event，不写长过程。
+7. 每个任务完成后自动加载 `check.md` 做任务级检查。
+8. 当前 Wave 任务完成后执行 Barrier。
+9. Barrier 通过 -> 进入下一 Wave；Barrier 失败 -> 只修复失败项，不进入下一 Wave。
+10. do/check 循环重复或上下文增长 -> 加载 `compact.md`。
+11. 所有任务完成 -> 将 CURRENT 的 Next Step 更新为 `Ready for /archive`。
 
 ## do/check 循环
 
@@ -39,6 +40,56 @@
     -> 失败：更新 blocker / Short Notes，回到 /do 修复
     -> 重复失败或出现风险：暂停
 ```
+
+## Wave Scheduler 执行
+
+`/do` 不应把任务当作 flat checklist 顺序执行。存在 `Wave` 字段时，必须按 Wave 执行：
+
+- 先执行 Wave 0。
+- Barrier 0 通过后执行 Wave 1。
+- Barrier 1 通过后执行 Wave 2。
+- 以此类推。
+
+当前环境支持 true parallel subagents 时，同一 Wave 内可并行 dispatch。当前环境不支持时，使用 sequential execution with Wave/Barrier semantics：顺序执行，但不能跳过 Barrier，也不能提前进入下一 Wave。
+
+同一 Wave 内可执行任务必须满足：
+
+- `Status` 是 `pending`。
+- `DependsOn` 为空或依赖任务均为 `done`。
+- `Files` 与其他可执行任务不重叠。
+- `Forbidden` 明确。
+- `ConflictBoundary` 明确。
+- `Acceptance` 可验证。
+
+`code-reviewer` 审计任务必须单独放在 review Wave，不与 implementation tasks 同 Wave。
+
+## Barrier
+
+每个 Wave 结束后必须执行 Barrier：
+
+1. collect diffs。
+2. 检查 file overlap。
+3. 检查 Forbidden path violation。
+4. 检查 Acceptance criteria。
+5. 记录 task events。
+6. 更新 task status。
+7. 已授权时运行 targeted checks。
+8. 只在 Barrier 通过后进入下一 Wave。
+
+Barrier 失败时，不进入下一 Wave；只修复失败项，然后重新执行 Barrier。
+
+## Worktree isolation
+
+代码修改任务优先使用 Worktree 隔离：
+
+`.worktrees/<task-id>-<slug>/`
+
+- 每个 subagent 只在自己的 Worktree 和允许的 `Files` 范围内工作。
+- orchestrator 才能合并 diff。
+- subagent 不允许修改 `Forbidden` 路径。
+- subagent 不允许无关重构、升级依赖或格式化全项目。
+
+如果当前环境不适合创建 Worktree，可在同一工作区顺序执行，但必须保留 `Files`、`Forbidden`、`ConflictBoundary` 检查。
 
 ## Agent 边界
 
@@ -88,10 +139,13 @@
 
 ## 产物归类
 
-- 临时文件放 `.ai/tmp/`。
-- 报告、截图、验证摘要放 `.ai/artifacts/`。
+- 当前 change 有独立目录时，临时文件放 `.ai/changes/<change-id>/tmp/`。
+- 当前 change 有独立目录时，日志摘要放 `.ai/changes/<change-id>/logs/`。
+- 当前 change 有独立目录时，验证产物放 `.ai/changes/<change-id>/artifacts/`。
+- 没有 change 目录时，临时文件放 `.ai/tmp/`，验证摘要放 `.ai/artifacts/`。
 - 不在 `.ai` 根目录创建散乱的 log / tmp / json / txt / dump / trace 文件。
 - 不把完整日志粘贴进 CURRENT 或 TASKS。
+- 归档时只保留必要产物：`proposal.md`、`design.md`、`tasks.md`、`wave-plan.md`、`handoff.md`、`review.md`、`check.md`、`task-events.jsonl`。
 
 ## 生成文件卫生
 
